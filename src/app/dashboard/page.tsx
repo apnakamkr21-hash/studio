@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +40,23 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function DashboardPage() {
+  const [events, setEvents] = useState<Event[]>(allEvents.slice(0, 5));
+
+  const onEventUpdated = (updatedEvent: Event) => {
+    const eventIndex = events.findIndex(e => e.id === updatedEvent.id);
+    if (eventIndex !== -1) {
+      setEvents(prev =>
+        prev.map(e => (e.id === updatedEvent.id ? updatedEvent : e))
+      );
+    } else {
+      setEvents(prev => [updatedEvent, ...prev]);
+    }
+  };
+
+  const onEventDeleted = (eventId: string) => {
+    setEvents(prev => prev.filter(e => e.id !== eventId));
+  };
+  
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -51,7 +68,7 @@ export default function DashboardPage() {
             Manage your events and track performance.
           </p>
         </div>
-        <CreateEventDialog>
+        <CreateEventDialog onEventUpdated={onEventUpdated}>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
             Create Event
@@ -65,7 +82,11 @@ export default function DashboardPage() {
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
         <TabsContent value="events" className="mt-4">
-          <EventTable />
+          <EventTable
+            events={events}
+            onEventUpdated={onEventUpdated}
+            onEventDeleted={onEventDeleted}
+          />
         </TabsContent>
         <TabsContent value="analytics" className="mt-4">
           <Card>
@@ -84,17 +105,27 @@ export default function DashboardPage() {
   );
 }
 
-function EventTable() {
-  // Mock data for organizer's events
-  const [organizerEvents, setOrganizerEvents] = useState<Event[]>(
-    allEvents.slice(0, 5)
-  );
+interface EventTableProps {
+  events: Event[];
+  onEventUpdated: (event: Event) => void;
+  onEventDeleted: (eventId: string) => void;
+}
+
+function EventTable({
+  events,
+  onEventUpdated,
+  onEventDeleted,
+}: EventTableProps) {
   const [eventToEdit, setEventToEdit] = useState<Event | undefined>(undefined);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const { toast } = useToast();
-  const router = useRouter();
+  const [clientReady, setClientReady] = useState(false);
+
+  useEffect(() => {
+    setClientReady(true);
+  }, []);
 
   const handleEdit = (event: Event) => {
     setEventToEdit(event);
@@ -108,7 +139,7 @@ function EventTable() {
 
   const handleDeleteConfirm = () => {
     if (eventToDelete) {
-      setOrganizerEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
+      onEventDeleted(eventToDelete.id);
       toast({
         title: 'Event Deleted',
         description: `${eventToDelete.name} has been successfully deleted.`,
@@ -117,14 +148,7 @@ function EventTable() {
     setIsDeleteDialogOpen(false);
     setEventToDelete(null);
   };
-
-  const onEventUpdated = (updatedEvent: Event) => {
-    setOrganizerEvents(prev =>
-      prev.map(e => (e.id === updatedEvent.id ? updatedEvent : e))
-    );
-    // Add logic for creating a new event if needed
-  };
-
+  
   return (
     <>
       <Card>
@@ -139,11 +163,11 @@ function EventTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {organizerEvents.map(event => (
+            {events.map(event => (
               <TableRow key={event.id}>
                 <TableCell className="font-medium">{event.name}</TableCell>
                 <TableCell className="hidden sm:table-cell">
-                  {new Date(event.date).toLocaleDateString()}
+                  {clientReady ? new Date(event.date).toLocaleDateString() : '...'}
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {event.price > 0 ? (
@@ -152,7 +176,9 @@ function EventTable() {
                     <Badge variant="outline">Free</Badge>
                   )}
                 </TableCell>
-                <TableCell>{Math.floor(Math.random() * 200)} / 200</TableCell>
+                <TableCell>
+                  {clientReady ? `${Math.floor(Math.random() * 200)} / 200` : '...'}
+                </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
