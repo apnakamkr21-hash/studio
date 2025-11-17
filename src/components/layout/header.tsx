@@ -14,7 +14,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Avatar,
   AvatarFallback,
@@ -51,7 +51,7 @@ export function Header() {
   }) => (
     <nav
       className={cn(
-        'flex items-center gap-4 text-sm font-medium text-muted-foreground',
+        'flex items-center gap-1 text-sm font-medium',
         isMobile ? 'flex-col items-start gap-2' : 'hidden md:flex',
         className
       )}
@@ -61,12 +61,15 @@ export function Header() {
           key={item.href}
           href={item.href}
           className={cn(
-            'transition-colors hover:text-foreground',
-            pathname === item.href && 'text-foreground',
-            isMobile && 'flex items-center gap-3 rounded-lg px-3 py-2'
+            buttonVariants({
+              variant: pathname === item.href ? 'default' : 'ghost',
+              size: 'sm',
+            }),
+            'justify-start',
+            isMobile && 'w-full'
           )}
         >
-          {isMobile && <item.icon className="h-4 w-4" />}
+          <item.icon className="h-4 w-4 " />
           {item.label}
         </Link>
       ))}
