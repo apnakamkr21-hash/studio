@@ -7,4 +7,9 @@ export type ImagePlaceholder = {
   imageHint: string;
 };
 
-export const PlaceHolderImages: ImagePlaceholder[] = data.placeholderImages;
+const placeholderImagesMap: Record<string, ImagePlaceholder> = {};
+(data.placeholderImages as ImagePlaceholder[]).forEach(image => {
+  placeholderImagesMap[image.id] = image;
+});
+
+export const PlaceHolderImages = placeholderImagesMap;
