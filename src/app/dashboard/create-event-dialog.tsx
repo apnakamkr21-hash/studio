@@ -153,7 +153,7 @@ export function CreateEventDialog({ children }: { children: React.ReactNode }) {
               name="price"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Price ($)</FormLabel>
+                  <FormLabel>Price (INR)</FormLabel>
                   <FormControl>
                     <Input type="number" placeholder="0 for free events" {...field} />
                   </FormControl>

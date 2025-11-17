@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Calendar,
   MapPin,
-  DollarSign,
+  IndianRupee,
   Users,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -91,7 +91,7 @@ export default function EventPage({ params }: { params: { id: string } }) {
                   </div>
                 </div>
                 <div className="flex items-start">
-                  <DollarSign className="h-5 w-5 mr-3 mt-1 text-primary shrink-0" />
+                  <IndianRupee className="h-5 w-5 mr-3 mt-1 text-primary shrink-0" />
                   <div>
                     <p className="font-semibold">
                       {event.price > 0 ? formatCurrency(event.price) : 'Free'}
