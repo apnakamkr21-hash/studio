@@ -18,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
@@ -105,10 +106,14 @@ function EventTable() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem>View Details</DropdownMenuItem>
                     <DropdownMenuItem>Edit Event</DropdownMenuItem>
-                    <DropdownMenuItem>Manage Attendees</DropdownMenuItem>
                     <DropdownMenuItem>Duplicate Event</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>Manage Attendees</DropdownMenuItem>
+                    <DropdownMenuItem>View Analytics</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                       Delete Event
