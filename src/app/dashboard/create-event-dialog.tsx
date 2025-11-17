@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Popover,
   PopoverContent,
@@ -33,10 +33,13 @@ import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
+import type { Event } from '@/lib/types';
 
 const eventFormSchema = z.object({
   name: z.string().min(3, 'Event name must be at least 3 characters.'),
-  description: z.string().min(10, 'Description must be at least 10 characters.'),
+  description: z
+    .string()
+    .min(10, 'Description must be at least 10 characters.'),
   date: z.date({
     required_error: 'A date is required.',
   }),
@@ -45,37 +48,94 @@ const eventFormSchema = z.object({
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
 
-export function CreateEventDialog({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = React.useState(false);
+interface CreateEventDialogProps {
+  children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  event?: Event;
+  onEventUpdated: (event: Event) => void;
+}
+
+export function CreateEventDialog({
+  children,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
+  event,
+  onEventUpdated,
+}: CreateEventDialogProps) {
+  const [internalOpen, setInternalOpen] = React.useState(false);
+
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = setControlledOpen || setInternalOpen;
+  const isEditing = !!event;
+
   const { toast } = useToast();
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      price: 0,
-    },
   });
 
+  useEffect(() => {
+    if (event) {
+      form.reset({
+        name: event.name,
+        description: event.description,
+        date: new Date(event.date),
+        price: event.price,
+      });
+    } else {
+      form.reset({
+        name: '',
+        description: '',
+        price: 0,
+        date: undefined,
+      });
+    }
+  }, [event, form]);
+
   const onSubmit = (data: EventFormValues) => {
-    // Simulate API call
-    console.log(data);
+    const newEventData = {
+      ...data,
+      date: data.date.toISOString(),
+      id: event?.id || `evt-${Date.now()}`,
+      longDescription: event?.longDescription || data.description,
+      venue: event?.venue || 'TBD',
+      committee: event?.committee || 'TBD',
+      tags: event?.tags || [],
+      image: event?.image || {
+        id: 'placeholder',
+        imageUrl: 'https://placehold.co/600x400',
+        imageHint: 'placeholder',
+        description: 'placeholder',
+      },
+    };
+
+    onEventUpdated(newEventData);
     toast({
-      title: 'Event Created!',
-      description: `${data.name} has been successfully created.`,
+      title: isEditing ? 'Event Updated!' : 'Event Created!',
+      description: `${data.name} has been successfully ${
+        isEditing ? 'updated' : 'created'
+      }.`,
     });
     setOpen(false);
     form.reset();
   };
+  
+  const DialogTriggerComponent = children ? (
+    <DialogTrigger asChild>{children}</DialogTrigger>
+  ) : null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      {DialogTriggerComponent}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="font-headline">Create New Event</DialogTitle>
+          <DialogTitle className="font-headline">
+            {isEditing ? 'Edit Event' : 'Create New Event'}
+          </DialogTitle>
           <DialogDescription>
-            Fill in the details to create a new event for the campus to see.
+            {isEditing
+              ? 'Update the details for your event.'
+              : 'Fill in the details to create a new event for the campus to see.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -155,7 +215,11 @@ export function CreateEventDialog({ children }: { children: React.ReactNode }) {
                 <FormItem>
                   <FormLabel>Price (INR)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="0 for free events" {...field} />
+                    <Input
+                      type="number"
+                      placeholder="0 for free events"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -169,7 +233,9 @@ export function CreateEventDialog({ children }: { children: React.ReactNode }) {
               >
                 Cancel
               </Button>
-              <Button type="submit">Create Event</Button>
+              <Button type="submit">
+                {isEditing ? 'Save Changes' : 'Create Event'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
