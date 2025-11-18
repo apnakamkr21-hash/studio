@@ -7,6 +7,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Event } from '@/lib/types';
 import { collection, query, orderBy } from 'firebase/firestore';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { PlusCircle } from 'lucide-react';
 
 export default function Home() {
   const firestore = useFirestore();
@@ -37,11 +40,23 @@ export default function Home() {
       <section>
         <h2 className="text-2xl font-headline font-bold mb-6">All Events</h2>
         {isLoading && <EventsSkeleton />}
-        {!isLoading && events && (
+        {!isLoading && events && events.length > 0 && (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {events.map(event => (
               <EventCard key={event.id} event={event} />
             ))}
+          </div>
+        )}
+         {!isLoading && events?.length === 0 && (
+          <div className="text-center text-muted-foreground border-2 border-dashed rounded-lg p-12">
+            <h3 className="text-lg font-semibold">No events have been created yet.</h3>
+            <p className="mt-2 mb-4">Go to the dashboard to create a new event or add some demo data.</p>
+            <Button asChild>
+              <Link href="/dashboard">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Go to Dashboard
+              </Link>
+            </Button>
           </div>
         )}
       </section>
