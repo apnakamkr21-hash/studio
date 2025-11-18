@@ -17,7 +17,9 @@ import { useRouter } from 'next/navigation';
 import { Button } from './ui/button';
 import { useState } from 'react';
 import { formatCurrency } from '@/lib/utils';
-import { Copy } from 'lucide-react';
+import { Copy, CreditCard } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import Link from 'next/link';
 
 interface PaymentDialogProps {
   event: Event;
@@ -37,6 +39,7 @@ export function PaymentDialog({
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   const upiLink = `upi://pay?pa=${UPI_ID}&pn=Campus%20Events%20Hub&am=${event.price}&cu=INR&tn=Ticket%20for%20${encodeURIComponent(event.title)}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiLink)}`;
@@ -98,24 +101,34 @@ export function PaymentDialog({
             Complete Your Payment
           </DialogTitle>
           <DialogDescription>
-            Scan the QR code or use the UPI ID to pay{' '}
+            Pay{' '}
             <span className="font-bold text-foreground">
               {formatCurrency(event.price)}
-            </span>
-            .
+            </span>{' '}
+            using your favorite UPI app.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center gap-4 py-4">
-          <div className="rounded-lg border-4 border-white bg-white p-2 shadow-lg">
-            <Image
-              src={qrCodeUrl}
-              alt="UPI QR Code"
-              width={200}
-              height={200}
-            />
-          </div>
+          {isMobile ? (
+            <Button asChild size="lg" className="w-full">
+               <Link href={upiLink}>
+                <CreditCard className="mr-2" /> Pay with UPI App
+              </Link>
+            </Button>
+          ) : (
+            <div className="rounded-lg border-4 border-white bg-white p-2 shadow-lg">
+              <Image
+                src={qrCodeUrl}
+                alt="UPI QR Code"
+                width={200}
+                height={200}
+              />
+            </div>
+          )}
           <p className="text-sm text-muted-foreground">
-            Scan with any UPI app
+            {isMobile
+              ? 'Tap the button above to pay securely.'
+              : 'Scan with any UPI app'}
           </p>
           <div className="w-full text-center">
             <p className="text-sm text-muted-foreground mb-1">Or pay to this UPI ID:</p>
@@ -142,7 +155,7 @@ export function PaymentDialog({
             disabled={isLoading}
             className="bg-primary hover:bg-primary/90"
           >
-            {isLoading ? 'Confirming...' : 'Confirm Booking'}
+            {isLoading ? 'Confirming...' : 'I have paid, Confirm Booking'}
           </Button>
         </DialogFooter>
       </DialogContent>
