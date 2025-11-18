@@ -2,15 +2,13 @@ import type { ImagePlaceholder } from './placeholder-images';
 
 export interface Event {
   id: string;
-  name: string;
+  title: string;
   description: string;
-  longDescription: string;
   date: string;
   venue: string;
   price: number;
-  committee: string;
-  tags: string[];
-  image: ImagePlaceholder;
+  committeeId: string;
+  imageUrl?: string;
 }
 
 export interface Ticket {
@@ -18,4 +16,14 @@ export interface Ticket {
   event: Event;
   studentName: string;
   qrCodeUrl: string;
+}
+
+
+export interface Booking {
+  id: string;
+  eventId: string;
+  userId: string;
+  bookingDate: string;
+  qrCode: string;
+  event?: Event; 
 }

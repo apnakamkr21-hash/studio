@@ -1,5 +1,4 @@
 'use client';
-import { events as allEvents } from '@/lib/data';
 import type { Event } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -38,25 +37,20 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 
 export default function DashboardPage() {
-  const [events, setEvents] = useState<Event[]>(allEvents.slice(0, 5));
+  const firestore = useFirestore();
+  const eventsQuery = useMemoFirebase(
+    () =>
+      firestore
+        ? query(collection(firestore, 'events'), orderBy('date', 'desc'))
+        : null,
+    [firestore]
+  );
+  const { data: events, isLoading } = useCollection<Omit<Event, 'id'>>(eventsQuery);
 
-  const onEventUpdated = (updatedEvent: Event) => {
-    const eventIndex = events.findIndex(e => e.id === updatedEvent.id);
-    if (eventIndex !== -1) {
-      setEvents(prev =>
-        prev.map(e => (e.id === updatedEvent.id ? updatedEvent : e))
-      );
-    } else {
-      setEvents(prev => [updatedEvent, ...prev]);
-    }
-  };
-
-  const onEventDeleted = (eventId: string) => {
-    setEvents(prev => prev.filter(e => e.id !== eventId));
-  };
-  
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -68,7 +62,7 @@ export default function DashboardPage() {
             Manage your events and track performance.
           </p>
         </div>
-        <CreateEventDialog onEventUpdated={onEventUpdated}>
+        <CreateEventDialog>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
             Create Event
@@ -83,9 +77,8 @@ export default function DashboardPage() {
         </TabsList>
         <TabsContent value="events" className="mt-4">
           <EventTable
-            events={events}
-            onEventUpdated={onEventUpdated}
-            onEventDeleted={onEventDeleted}
+            events={events || []}
+            isLoading={isLoading}
           />
         </TabsContent>
         <TabsContent value="analytics" className="mt-4">
@@ -107,14 +100,12 @@ export default function DashboardPage() {
 
 interface EventTableProps {
   events: Event[];
-  onEventUpdated: (event: Event) => void;
-  onEventDeleted: (eventId: string) => void;
+  isLoading: boolean;
 }
 
 function EventTable({
   events,
-  onEventUpdated,
-  onEventDeleted,
+  isLoading,
 }: EventTableProps) {
   const [eventToEdit, setEventToEdit] = useState<Event | undefined>(undefined);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -122,6 +113,7 @@ function EventTable({
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const { toast } = useToast();
   const [clientReady, setClientReady] = useState(false);
+  const firestore = useFirestore();
 
   useEffect(() => {
     setClientReady(true);
@@ -138,17 +130,22 @@ function EventTable({
   };
 
   const handleDeleteConfirm = () => {
-    if (eventToDelete) {
-      onEventDeleted(eventToDelete.id);
+    if (eventToDelete && firestore) {
+      const eventRef = doc(firestore, 'events', eventToDelete.id);
+      deleteDocumentNonBlocking(eventRef);
       toast({
         title: 'Event Deleted',
-        description: `${eventToDelete.name} has been successfully deleted.`,
+        description: `${eventToDelete.title} has been successfully deleted.`,
       });
     }
     setIsDeleteDialogOpen(false);
     setEventToDelete(null);
   };
   
+  if (isLoading) {
+    return <p>Loading events...</p>
+  }
+
   return (
     <>
       <Card>
@@ -165,7 +162,7 @@ function EventTable({
           <TableBody>
             {events.map(event => (
               <TableRow key={event.id}>
-                <TableCell className="font-medium">{event.name}</TableCell>
+                <TableCell className="font-medium">{event.title}</TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {clientReady ? new Date(event.date).toLocaleDateString() : '...'}
                 </TableCell>
@@ -177,7 +174,7 @@ function EventTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  {clientReady ? `${Math.floor(Math.random() * 200)} / 200` : '...'}
+                  {clientReady ? 'N/A' : '...'}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
@@ -195,10 +192,6 @@ function EventTable({
                       <DropdownMenuItem onClick={() => handleEdit(event)}>
                         Edit Event
                       </DropdownMenuItem>
-                      <DropdownMenuItem>Duplicate Event</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>Manage Attendees</DropdownMenuItem>
-                      <DropdownMenuItem>View Analytics</DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive focus:bg-destructive/10 focus:text-destructive"
@@ -218,7 +211,6 @@ function EventTable({
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         event={eventToEdit}
-        onEventUpdated={onEventUpdated}
       />
       <AlertDialog
         open={isDeleteDialogOpen}
@@ -229,7 +221,7 @@ function EventTable({
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the
-              event "{eventToDelete?.name}".
+              event "{eventToDelete?.title}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

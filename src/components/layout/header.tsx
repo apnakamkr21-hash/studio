@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ShieldCheck,
   PanelLeft,
+  LogIn
 } from 'lucide-react';
 import {
   Sheet,
@@ -30,6 +31,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { cn } from '@/lib/utils';
+import { useUser, useAuth, initiateAnonymousSignIn } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { useEffect } from 'react';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -41,6 +45,15 @@ const menuItems = [
 export function Header() {
   const userAvatar = PlaceHolderImages['user-avatar'];
   const pathname = usePathname();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  
+  useEffect(() => {
+    if (!user && !isUserLoading) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [user, isUserLoading, auth]);
+
 
   const NavLinks = ({
     className,
@@ -116,26 +129,33 @@ export function Header() {
       </Sheet>
 
       <div className="flex w-full items-center justify-end gap-4 md:ml-auto md:gap-2 lg:gap-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Avatar className="h-8 w-8 cursor-pointer">
-              <AvatarImage
-                src={userAvatar.imageUrl}
-                data-ai-hint={userAvatar.imageHint}
-                alt="User avatar"
-              />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Log out</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Avatar className="h-8 w-8 cursor-pointer">
+                <AvatarImage
+                  src={user.photoURL || userAvatar.imageUrl}
+                  data-ai-hint={userAvatar.imageHint}
+                  alt="User avatar"
+                />
+                <AvatarFallback>{user.isAnonymous ? 'A' : user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Profile</DropdownMenuItem>
+              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => signOut(auth)}>Log out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+           <Button variant="outline" size="sm" onClick={() => initiateAnonymousSignIn(auth)}>
+             <LogIn className="mr-2 h-4 w-4" />
+             Sign In
+           </Button>
+        )}
       </div>
     </header>
   );

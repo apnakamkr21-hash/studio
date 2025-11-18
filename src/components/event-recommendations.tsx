@@ -4,7 +4,6 @@ import {
   getPersonalizedEventRecommendations,
   type PersonalizedEventRecommendationsOutput,
 } from '@/ai/flows/personalized-event-recommendations';
-import { events } from '@/lib/data';
 import type { Event } from '@/lib/types';
 import {
   Carousel,
@@ -17,15 +16,19 @@ import { EventCard } from './event-card';
 import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
 
-export default function EventRecommendations() {
+export default function EventRecommendations({ allEvents }: { allEvents: Event[] }) {
   const [recommendations, setRecommendations] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!allEvents || allEvents.length === 0) {
+      setLoading(false);
+      return;
+    }
     const fetchRecommendations = async () => {
       setLoading(true);
       try {
-        const allEventNames = events.map(event => event.name);
+        const allEventNames = allEvents.map(event => event.title);
         const input = {
           studentId: 'student123',
           interests: ['music', 'technology', 'art'],
@@ -35,8 +38,8 @@ export default function EventRecommendations() {
 
         const result: PersonalizedEventRecommendationsOutput =
           await getPersonalizedEventRecommendations(input);
-        const recommendedEvents = events.filter(event =>
-          result.recommendedEvents.includes(event.name)
+        const recommendedEvents = allEvents.filter(event =>
+          result.recommendedEvents.includes(event.title)
         );
         setRecommendations(recommendedEvents);
       } catch (error) {
@@ -48,7 +51,7 @@ export default function EventRecommendations() {
     };
 
     fetchRecommendations();
-  }, []);
+  }, [allEvents]);
 
   if (loading) {
     return <RecommendationSkeleton />;

@@ -34,16 +34,24 @@ import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import type { Event } from '@/lib/types';
+import {
+  addDocumentNonBlocking,
+  setDocumentNonBlocking,
+  useFirestore,
+} from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
 const eventFormSchema = z.object({
-  name: z.string().min(3, 'Event name must be at least 3 characters.'),
+  title: z.string().min(3, 'Event name must be at least 3 characters.'),
   description: z
     .string()
     .min(10, 'Description must be at least 10 characters.'),
   date: z.date({
     required_error: 'A date is required.',
   }),
+  venue: z.string().min(3, 'Venue is required.'),
   price: z.coerce.number().min(0, 'Price must be a positive number.'),
+  committeeId: z.string().min(2, 'Committee ID is required'),
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
@@ -53,7 +61,6 @@ interface CreateEventDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   event?: Event;
-  onEventUpdated: (event: Event) => void;
 }
 
 export function CreateEventDialog({
@@ -61,9 +68,9 @@ export function CreateEventDialog({
   open: controlledOpen,
   onOpenChange: setControlledOpen,
   event,
-  onEventUpdated,
 }: CreateEventDialogProps) {
   const [internalOpen, setInternalOpen] = React.useState(false);
+  const firestore = useFirestore();
 
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = setControlledOpen || setInternalOpen;
@@ -77,49 +84,51 @@ export function CreateEventDialog({
   useEffect(() => {
     if (event) {
       form.reset({
-        name: event.name,
+        title: event.title,
         description: event.description,
         date: new Date(event.date),
         price: event.price,
+        venue: event.venue,
+        committeeId: event.committeeId,
       });
     } else {
       form.reset({
-        name: '',
+        title: '',
         description: '',
         price: 0,
         date: undefined,
+        venue: '',
+        committeeId: '',
       });
     }
   }, [event, form]);
 
   const onSubmit = (data: EventFormValues) => {
+    if (!firestore) return;
+
     const newEventData = {
       ...data,
       date: data.date.toISOString(),
-      id: event?.id || `evt-${Date.now()}`,
-      longDescription: event?.longDescription || data.description,
-      venue: event?.venue || 'TBD',
-      committee: event?.committee || 'TBD',
-      tags: event?.tags || [],
-      image: event?.image || {
-        id: 'placeholder',
-        imageUrl: 'https://placehold.co/600x400',
-        imageHint: 'placeholder',
-        description: 'placeholder',
-      },
     };
 
-    onEventUpdated(newEventData);
+    if (isEditing && event.id) {
+      const eventRef = doc(firestore, 'events', event.id);
+      setDocumentNonBlocking(eventRef, newEventData, { merge: true });
+    } else {
+      const eventsCol = collection(firestore, 'events');
+      addDocumentNonBlocking(eventsCol, newEventData);
+    }
+
     toast({
       title: isEditing ? 'Event Updated!' : 'Event Created!',
-      description: `${data.name} has been successfully ${
+      description: `${data.title} has been successfully ${
         isEditing ? 'updated' : 'created'
       }.`,
     });
     setOpen(false);
     form.reset();
   };
-  
+
   const DialogTriggerComponent = children ? (
     <DialogTrigger asChild>{children}</DialogTrigger>
   ) : null;
@@ -142,7 +151,7 @@ export function CreateEventDialog({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="name"
+              name="title"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Event Name</FormLabel>
@@ -204,6 +213,32 @@ export function CreateEventDialog({
                       />
                     </PopoverContent>
                   </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="venue"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Venue</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Main Quad" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="committeeId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Committee ID</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., music-committee" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

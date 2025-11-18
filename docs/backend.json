@@ -1,7 +1,7 @@
+
 {
   "entities": {
     "Event": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Event",
       "type": "object",
       "description": "Represents an event on campus.",
@@ -33,7 +33,7 @@
         },
         "committeeId": {
           "type": "string",
-          "description": "Reference to the Committee organizing the event. (Relationship: Committee 1:N Event)"
+          "description": "Reference to the Committee organizing the event."
         },
         "imageUrl": {
           "type": "string",
@@ -41,7 +41,6 @@
         }
       },
       "required": [
-        "id",
         "title",
         "description",
         "date",
@@ -51,7 +50,6 @@
       ]
     },
     "Committee": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Committee",
       "type": "object",
       "description": "Represents a campus committee organizing events.",
@@ -74,13 +72,11 @@
         }
       },
       "required": [
-        "id",
         "name",
         "description"
       ]
     },
     "Booking": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Booking",
       "type": "object",
       "description": "Represents a booking made by a student for an event.",
@@ -91,11 +87,11 @@
         },
         "eventId": {
           "type": "string",
-          "description": "Reference to the Event that was booked. (Relationship: Event 1:N Booking)"
+          "description": "Reference to the Event that was booked."
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the User who made the booking. (Relationship: User 1:N Booking)"
+          "description": "Reference to the User who made the booking."
         },
         "bookingDate": {
           "type": "string",
@@ -108,7 +104,6 @@
         }
       },
       "required": [
-        "id",
         "eventId",
         "userId",
         "bookingDate",
@@ -116,14 +111,13 @@
       ]
     },
     "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user (student) in the system.  Authentication data (e.g. passwords) is not stored here, and an external authentication service is presumed to be in use.",
+      "description": "Represents a user (student) in the system.  Authentication data is not stored here.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the user."
+          "description": "Unique identifier for the user (from Firebase Auth)."
         },
         "name": {
           "type": "string",
@@ -140,7 +134,6 @@
         }
       },
       "required": [
-        "id",
         "name",
         "email"
       ]
@@ -153,80 +146,17 @@
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/committees/{committeeId}",
-        "definition": {
-          "entityName": "Committee",
-          "schema": {
-            "$ref": "#/backend/entities/Committee"
-          },
-          "description": "Stores committee profiles.  Committee ID is used as document ID.",
-          "params": [
-            {
-              "name": "committeeId",
-              "description": "The unique identifier of the committee."
-            }
-          ]
-        }
+    "/events/{eventId}": {
+      "schema": {
+        "$ref": "#/entities/Event"
       },
-      {
-        "path": "/committees/{committeeId}/events/{eventId}",
-        "definition": {
-          "entityName": "Event",
-          "schema": {
-            "$ref": "#/backend/entities/Event"
-          },
-          "description": "Stores events organized by a specific committee. Includes denormalized 'committeeId' field to ensure authorization independence, allowing secure event creation rules.",
-          "params": [
-            {
-              "name": "committeeId",
-              "description": "The unique identifier of the committee organizing the event."
-            },
-            {
-              "name": "eventId",
-              "description": "The unique identifier of the event."
-            }
-          ]
-        }
+      "description": "Stores all event documents in a single top-level collection for easy querying."
+    },
+    "/users/{userId}/bookings/{bookingId}": {
+      "schema": {
+        "$ref": "#/entities/Booking"
       },
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profiles.  User ID is used as document ID.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/bookings/{bookingId}",
-        "definition": {
-          "entityName": "Booking",
-          "schema": {
-            "$ref": "#/backend/entities/Booking"
-          },
-          "description": "Stores event bookings made by a specific user.  Path-based ownership guarantees user-specific read/write access.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who made the booking."
-            },
-            {
-              "name": "bookingId",
-              "description": "The unique identifier of the booking."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore data structure is designed to support a campus event booking application, focusing on security, scalability, and ease of management. The structure adheres to the core design principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), QAPs (Queries are not Filters), and Invariants.\n\n**Authorization Independence:** This is achieved primarily through denormalization. Specifically, the `Event` documents store the `committeeId`. This allows security rules to validate that the committee creating the event is indeed the committee specified without needing to perform a `get()` operation. User-specific bookings are handled under the `/users/{userId}/bookings/{bookingId}` path, implicitly granting the user ownership over their booking data. Bookings also store the `eventId` for listing events booked by a particular user.\n\n**Clarity of Intent:** The path structure clearly reflects ownership and relationships. Events are organized under committees, and bookings are organized under users. The naming conventions are explicit and semantic.\n\n**DBAC (No Custom Claims):** Authorization is based solely on `request.auth.uid` and data stored in the database. No custom claims are used.  The hierarchical path `/users/{userId}/bookings/{bookingId}` is crucial for this.\n\n**QAPs (Rules are not Filters):** The structure supports secure `list` operations.  For example, listing all events for a specific committee is possible via a collection group query. User-specific bookings can be listed securely under the `/users/{userId}/bookings` path. Because the data is denormalized (Authorization Independence), security rules can validate list operations without needing to filter based on data lookups.\n\n**Invariants:** The structure facilitates maintaining data integrity. Ownership is explicitly defined in the paths. Timestamps can be enforced via server-side timestamps on creation and modification.  The inclusion of `committeeId` on the `Event` allows straightforward enforcement of which committees can create events.\n\nIn summary, the design prioritizes security and scalability by denormalizing key authorization information, structuring data for efficient querying and filtering, and adhering to consistent naming conventions."
+      "description": "Stores event bookings made by a specific user. Path-based ownership guarantees user-specific read/write access."
+    }
   }
 }
