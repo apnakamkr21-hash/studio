@@ -11,7 +11,7 @@ export default function BookingSuccessPage() {
     <div className="flex flex-col items-center justify-center min-h-[60vh]">
       <Card className="w-full max-w-md p-8 text-center shadow-2xl">
         <CardContent className="flex flex-col items-center justify-center">
-          <PartyPopper className="h-16 w-16 text-primary mb-4" />
+          <PartyPopper className="h-16 w-16 text-primary mb-4 animate-tada" />
           <h1 className="text-3xl font-bold font-headline text-primary">
             Booking Successful!
           </h1>

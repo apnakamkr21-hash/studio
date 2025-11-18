@@ -95,10 +95,18 @@ export default {
             height: '0',
           },
         },
+        tada: {
+          '0%': { transform: 'scale(1)' },
+          '10%, 20%': { transform: 'scale(0.9) rotate(-3deg)' },
+          '30%, 50%, 70%, 90%': { transform: 'scale(1.1) rotate(3deg)' },
+          '40%, 60%, 80%': { transform: 'scale(1.1) rotate(-3deg)' },
+          '100%': { transform: 'scale(1) rotate(0)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        tada: 'tada 1s ease-in-out',
       },
     },
   },
