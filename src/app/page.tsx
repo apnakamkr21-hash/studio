@@ -1,7 +1,7 @@
 'use client';
 import { EventCard } from '@/components/event-card';
 import EventRecommendations from '@/components/event-recommendations';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -10,9 +10,13 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { PlusCircle } from 'lucide-react';
+import { EventDetailDialog } from '@/components/event-detail-dialog';
 
 export default function Home() {
   const firestore = useFirestore();
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+
   const eventsQuery = useMemoFirebase(
     () =>
       firestore
@@ -20,7 +24,13 @@ export default function Home() {
         : null,
     [firestore]
   );
-  const { data: events, isLoading } = useCollection<Omit<Event, 'id'>>(eventsQuery);
+  const { data: events, isLoading } =
+    useCollection<Omit<Event, 'id'>>(eventsQuery);
+
+  const handleViewDetails = (event: Event) => {
+    setSelectedEvent(event);
+    setIsDetailDialogOpen(true);
+  };
 
   return (
     <div className="space-y-12">
@@ -43,14 +53,22 @@ export default function Home() {
         {!isLoading && events && events.length > 0 && (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {events.map(event => (
-              <EventCard key={event.id} event={event} />
+              <EventCard
+                key={event.id}
+                event={event}
+                onViewDetails={handleViewDetails}
+              />
             ))}
           </div>
         )}
-         {!isLoading && events?.length === 0 && (
+        {!isLoading && events?.length === 0 && (
           <div className="text-center text-muted-foreground border-2 border-dashed rounded-lg p-12">
-            <h3 className="text-lg font-semibold">No events have been created yet.</h3>
-            <p className="mt-2 mb-4">Go to the dashboard to create a new event or add some demo data.</p>
+            <h3 className="text-lg font-semibold">
+              No events have been created yet.
+            </h3>
+            <p className="mt-2 mb-4">
+              Go to the dashboard to create a new event or add some demo data.
+            </p>
             <Button asChild>
               <Link href="/dashboard">
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -60,6 +78,12 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      <EventDetailDialog
+        event={selectedEvent}
+        open={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+      />
     </div>
   );
 }
