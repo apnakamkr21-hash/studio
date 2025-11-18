@@ -1,8 +1,23 @@
+'use client';
 import EventRecommendations from '@/components/event-recommendations';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import type { Event } from '@/lib/types';
+import { collection, query, orderBy } from 'firebase/firestore';
 
 export default function RecommendationsPage() {
+  const firestore = useFirestore();
+
+  const eventsQuery = useMemoFirebase(
+    () =>
+      firestore
+        ? query(collection(firestore, 'events'), orderBy('date', 'desc'))
+        : null,
+    [firestore]
+  );
+  const { data: events, isLoading } = useCollection<Event>(eventsQuery);
+
   return (
     <div className="space-y-8">
       <div>
@@ -15,7 +30,8 @@ export default function RecommendationsPage() {
       </div>
 
       <Suspense fallback={<PageSkeleton />}>
-        <EventRecommendations />
+        {isLoading && <PageSkeleton />}
+        {events && <EventRecommendations allEvents={events} />}
       </Suspense>
     </div>
   );

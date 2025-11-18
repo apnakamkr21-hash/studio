@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   getPersonalizedEventRecommendations,
   type PersonalizedEventRecommendationsOutput,
 } from '@/ai/flows/personalized-event-recommendations';
-import type { Event } from '@/lib/types';
+import type { Event, Booking } from '@/lib/types';
 import {
   Carousel,
   CarouselContent,
@@ -15,64 +15,119 @@ import {
 import { EventCard } from './event-card';
 import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
+import {
+  useUser,
+  useFirestore,
+  useCollection,
+  useMemoFirebase,
+} from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { EventDetailDialog } from './event-detail-dialog';
 
-export default function EventRecommendations({ allEvents }: { allEvents: Event[] }) {
+export default function EventRecommendations({
+  allEvents,
+}: {
+  allEvents: Event[];
+}) {
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [recommendations, setRecommendations] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  useEffect(() => {
+  const bookingsQuery = useMemoFirebase(
+    () =>
+      user && firestore
+        ? collection(firestore, 'users', user.uid, 'bookings')
+        : null,
+    [user, firestore]
+  );
+  const { data: bookings } = useCollection<Booking>(bookingsQuery);
+
+  const fetchRecommendations = useCallback(async () => {
     if (!allEvents || allEvents.length === 0) {
       setLoading(false);
       return;
     }
-    const fetchRecommendations = async () => {
-      setLoading(true);
-      try {
-        const allEventNames = allEvents.map(event => event.title);
-        const input = {
-          studentId: 'student123',
-          interests: ['music', 'technology', 'art'],
-          pastActivity: ['Tech Conference 2023', 'Art in Bloom Exhibition'],
-          allEvents: allEventNames,
-        };
+    setLoading(true);
+    try {
+      const allEventTitles = allEvents.map(event => event.title);
 
-        const result: PersonalizedEventRecommendationsOutput =
-          await getPersonalizedEventRecommendations(input);
-        const recommendedEvents = allEvents.filter(event =>
-          result.recommendedEvents.includes(event.title)
-        );
-        setRecommendations(recommendedEvents);
-      } catch (error) {
-        console.error('Failed to get recommendations:', error);
-        setRecommendations([]);
-      } finally {
-        setLoading(false);
+      let pastActivityTitles: string[] = [];
+      if (bookings && bookings.length > 0) {
+        pastActivityTitles = allEvents
+          .filter(event => bookings.some(b => b.eventId === event.id))
+          .map(event => event.title);
+      } else {
+        // For new/anonymous users, use a few popular events as a baseline
+        pastActivityTitles = allEvents
+          .slice(0, 2)
+          .map(event => event.title);
       }
-    };
+      
+      const userInterests = user?.isAnonymous ? ['music', 'art'] : ['technology', 'workshops', 'music'];
 
+      const input = {
+        studentId: user?.uid || 'anonymous_user',
+        interests: userInterests,
+        pastActivity: pastActivityTitles,
+        allEvents: allEventTitles,
+      };
+
+      const result: PersonalizedEventRecommendationsOutput =
+        await getPersonalizedEventRecommendations(input);
+        
+      const recommendedEvents = allEvents.filter(event =>
+        result.recommendedEvents.includes(event.title)
+      );
+      setRecommendations(recommendedEvents);
+    } catch (error) {
+      console.error('Failed to get recommendations:', error);
+      // Fallback: show the 3 most recent events
+      setRecommendations(allEvents.slice(0, 3));
+    } finally {
+      setLoading(false);
+    }
+  }, [allEvents, bookings, user]);
+
+  useEffect(() => {
     fetchRecommendations();
-  }, [allEvents]);
+  }, [fetchRecommendations]);
+  
+  const handleViewDetails = (event: Event) => {
+    setSelectedEvent(event);
+    setIsDetailDialogOpen(true);
+  };
 
   if (loading) {
     return <RecommendationSkeleton />;
   }
 
   if (recommendations.length === 0) {
-    return null;
+    return null; // Don't show the section if there are no recommendations
   }
 
   return (
     <section>
       <h2 className="text-2xl font-headline font-bold mb-6">For You</h2>
-      <Carousel opts={{ align: 'start' }} className="w-full">
-        <CarouselContent className="-ml-2">
+      <Carousel
+        opts={{
+          align: 'start',
+        }}
+        className="w-full"
+      >
+        <CarouselContent className="-ml-2 md:-ml-4">
           {recommendations.map(event => (
             <CarouselItem
               key={event.id}
               className="pl-4 md:basis-1/2 lg:basis-1/3"
             >
-              <div className="h-full">
-                <EventCard event={event} />
+              <div className="h-full p-1">
+                <EventCard
+                  event={event}
+                  onViewDetails={handleViewDetails}
+                />
               </div>
             </CarouselItem>
           ))}
@@ -80,6 +135,11 @@ export default function EventRecommendations({ allEvents }: { allEvents: Event[]
         <CarouselPrevious className="ml-14" />
         <CarouselNext className="mr-14" />
       </Carousel>
+       <EventDetailDialog
+        event={selectedEvent}
+        open={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+      />
     </section>
   );
 }

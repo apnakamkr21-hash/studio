@@ -25,7 +25,7 @@ export default function Home() {
     [firestore]
   );
   const { data: events, isLoading } =
-    useCollection<Omit<Event, 'id'>>(eventsQuery);
+    useCollection<Event>(eventsQuery);
 
   const handleViewDetails = (event: Event) => {
     setSelectedEvent(event);

@@ -32,15 +32,24 @@ const prompt = ai.definePrompt({
   name: 'personalizedEventRecommendationsPrompt',
   input: {schema: PersonalizedEventRecommendationsInputSchema},
   output: {schema: PersonalizedEventRecommendationsOutputSchema},
-  prompt: `You are an AI assistant designed to provide personalized event recommendations to college students.
+  prompt: `You are an AI assistant designed to provide personalized event recommendations to college students. Your goal is to create a mix of relevance and discovery.
 
-  Based on a student's interests, past activities, and all available events, you will provide the best event recommendations.
+  Based on the student's interests and past activities, recommend a list of 3-5 events.
 
-  Interests: {{interests}}
-  Past Activities: {{pastActivity}}
-  All Events: {{allEvents}}
+  - Prioritize events that directly match their interests.
+  - Also include one or two "discovery" events that are popular or related to their interests in a less obvious way.
+  - Do not recommend events they have already attended (listed in Past Activities).
 
-  Please recommend events that align with the student's interests and past activities. Only return the names of events that are available.
+  Student Profile:
+  - Interests: {{interests}}
+  - Past Activities (Attended Events): {{pastActivity}}
+
+  Available Events (Do not recommend events not in this list):
+  {{#each allEvents}}
+  - {{this}}
+  {{/each}}
+
+  Please analyze the profile and available events carefully to provide a high-quality, personalized list. Only return the titles of the recommended events from the available list.
   Return the event recommendations in JSON format.
   `,
 });
