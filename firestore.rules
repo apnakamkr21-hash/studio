@@ -13,7 +13,7 @@ service cloud.firestore {
     }
     
     match /events/{eventId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
     
