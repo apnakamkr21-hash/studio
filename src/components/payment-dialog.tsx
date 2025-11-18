@@ -68,7 +68,7 @@ export function PaymentDialog({
           description: `Your ticket for ${event.title} has been booked.`,
         });
         onOpenChange(false);
-        router.push('/tickets');
+        router.push('/booking-success');
       })
       .catch(error => {
         toast({
