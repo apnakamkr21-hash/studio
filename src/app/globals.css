@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 252 67% 97%; /* Light Lavender */
-    --foreground: 271 100% 10%;
-    --card: 252 67% 99%;
-    --card-foreground: 271 100% 10%;
+    --background: 140 80% 96%; /* Light Green */
+    --foreground: 140 25% 15%;
+    --card: 140 80% 99%;
+    --card-foreground: 140 25% 15%;
     --popover: 0 0% 100%;
     --popover-foreground: 210 40% 3.9%;
-    --primary: 271 100% 25%; /* Deep Indigo */
+    --primary: 140 70% 30%; /* Forest Green */
     --primary-foreground: 0 0% 98%;
-    --secondary: 210 40% 96.1%;
+    --secondary: 140 20% 96.1%;
     --secondary-foreground: 215.4 16.3% 46.9%;
-    --muted: 210 40% 96.1%;
+    --muted: 140 20% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 45 100% 50%; /* Golden Yellow */
+    --accent: 50 100% 50%; /* Bright Yellow */
     --accent-foreground: 210 40% 3.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 271 100% 85%;
-    --input: 271 100% 90%;
-    --ring: 271 100% 25%;
+    --border: 140 70% 85%;
+    --input: 140 70% 90%;
+    --ring: 140 70% 30%;
     --radius: 0.5rem;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -32,25 +32,25 @@
   }
 
   .dark {
-    --background: 271 100% 5%;
+    --background: 140 25% 5%;
     --foreground: 0 0% 95%;
-    --card: 271 100% 8%;
+    --card: 140 25% 8%;
     --card-foreground: 0 0% 95%;
-    --popover: 271 100% 5%;
+    --popover: 140 25% 5%;
     --popover-foreground: 0 0% 95%;
-    --primary: 271 100% 65%;
+    --primary: 140 70% 55%;
     --primary-foreground: 0 0% 98%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 15%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 45 100% 50%;
+    --accent: 50 100% 50%;
     --accent-foreground: 210 40% 3.9%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 271 100% 15%;
-    --input: 271 100% 15%;
-    --ring: 271 100% 65%;
+    --border: 140 70% 15%;
+    --input: 140 70% 15%;
+    --ring: 140 70% 55%;
   }
 }
 
