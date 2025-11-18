@@ -37,11 +37,62 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
+
+const sampleEvents: Omit<Event, 'id'>[] = [
+  {
+    title: 'Campus Music Fest',
+    description: 'A massive music festival featuring student bands and local artists. Get ready for a day of incredible music, food, and fun under the sun!',
+    date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    venue: 'Main Quad',
+    price: 150,
+    committeeId: 'music-committee',
+    imageUrl: PlaceHolderImages['event-music-concert'].imageUrl,
+  },
+  {
+    title: 'Tech Summit 2024',
+    description: 'Join us for the annual Tech Summit, where industry leaders and innovators discuss the future of technology. Includes workshops and networking sessions.',
+    date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    venue: 'Engineering Hall',
+    price: 50,
+    committeeId: 'tech-club',
+    imageUrl: PlaceHolderImages['event-tech-conference'].imageUrl,
+  },
+  {
+    title: 'Art in Bloom',
+    description: 'An immersive art exhibition showcasing stunning floral arrangements and student artwork. A beautiful fusion of nature and creativity.',
+    date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
+    venue: 'Fine Arts Gallery',
+    price: 0,
+    committeeId: 'art-society',
+    imageUrl: PlaceHolderImages['event-art-exhibition'].imageUrl,
+  },
+  {
+    title: 'Annual Sports Day',
+    description: 'Compete for glory in a variety of track and field events. A day of friendly competition and campus-wide spirit.',
+    date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    venue: 'University Stadium',
+    price: 0,
+    committeeId: 'sports-union',
+    imageUrl: PlaceHolderImages['event-sports-day'].imageUrl,
+  },
+  {
+    title: 'Hackathon 2024',
+    description: 'A 24-hour coding marathon. Build innovative solutions, compete for prizes, and collaborate with fellow tech enthusiasts.',
+    date: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
+    venue: 'Computer Science Dept.',
+    price: 25,
+    committeeId: 'coding-club',
+    imageUrl: PlaceHolderImages['event-hackathon'].imageUrl,
+  },
+];
+
 
 export default function DashboardPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const eventsQuery = useMemoFirebase(
     () =>
       firestore
@@ -50,6 +101,29 @@ export default function DashboardPage() {
     [firestore]
   );
   const { data: events, isLoading } = useCollection<Omit<Event, 'id'>>(eventsQuery);
+
+  const handleSeed = async () => {
+    if (!firestore) return;
+    const batch = writeBatch(firestore);
+    const eventsCol = collection(firestore, 'events');
+    sampleEvents.forEach(eventData => {
+      const docRef = doc(eventsCol); // Create a new doc with a random ID
+      batch.set(docRef, eventData);
+    });
+    try {
+      await batch.commit();
+      toast({
+        title: 'Events Seeded!',
+        description: `${sampleEvents.length} demo events have been added.`,
+      });
+    } catch(e) {
+       toast({
+        variant: "destructive",
+        title: 'Error seeding events',
+        description: 'Could not add demo events to the database.',
+      });
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -62,12 +136,15 @@ export default function DashboardPage() {
             Manage your events and track performance.
           </p>
         </div>
-        <CreateEventDialog>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create Event
-          </Button>
-        </CreateEventDialog>
+        <div className="flex items-center gap-2">
+           <Button variant="outline" onClick={handleSeed} disabled={isLoading || (events && events.length > 0)}>Seed Events</Button>
+          <CreateEventDialog>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Event
+            </Button>
+          </CreateEventDialog>
+        </div>
       </div>
 
       <Tabs defaultValue="events">
@@ -144,6 +221,15 @@ function EventTable({
   
   if (isLoading) {
     return <p>Loading events...</p>
+  }
+
+  if (!isLoading && events.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground border-2 border-dashed rounded-lg p-12">
+        <h3 className="text-lg font-semibold">No events found.</h3>
+        <p>Click "Seed Events" to add some demo data or create a new event.</p>
+      </div>
+    )
   }
 
   return (
