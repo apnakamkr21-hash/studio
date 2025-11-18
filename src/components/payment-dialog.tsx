@@ -25,7 +25,7 @@ interface PaymentDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const UPI_ID = 'harshadshewae213@okhdfcbank';
+const UPI_ID = 'harshadshewale213@okhdfcbank';
 
 export function PaymentDialog({
   event,
